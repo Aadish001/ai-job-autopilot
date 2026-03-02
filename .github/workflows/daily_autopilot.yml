@@ -30,24 +30,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Inject Google Sheets Credentials
+      - name: Inject GCP Credentials & OAuth Token
         env:
           GCP_CREDS: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
+          OAUTH_TOKEN: ${{ secrets.GCP_OAUTH_TOKEN_JSON }}
         run: |
           mkdir -p req_files
           echo "$GCP_CREDS" > req_files/gcp_service_account.json
+          echo "$OAUTH_TOKEN" > req_files/token.json
 
-      - name: Run Pipeline (Safe Mode)
+      - name: Run Pipeline
         env:
           GEMMA_API_KEY: ${{ secrets.GEMMA_API_KEY }}
           RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
-          # The host can be hardcoded or injected if needed, but not strictly required by secrets
           RAPIDAPI_HOST: jsearch.p.rapidapi.com
           SMTP2GO_USERNAME: ${{ secrets.SMTP2GO_USER }}
           SMTP2GO_PASSWORD: ${{ secrets.SMTP2GO_PASS }}
           SAFE_MODE_EMAIL: ${{ secrets.SAFE_MODE_EMAIL }}
-          # Required for SheetManager to find the file
           GOOGLE_SHEETS_CREDENTIALS: req_files/gcp_service_account.json
           GOOGLE_SHEETS_ID: 1Nd-sFG_j7FrGIE2rv_o6-VOf7C2XmE0zdVEIjbcDkgY
+          DRIVE_ROOT_FOLDER_ID: ${{ secrets.DRIVE_ROOT_FOLDER_ID }}
         run: |
           python main.py
