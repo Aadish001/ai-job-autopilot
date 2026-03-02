@@ -31,9 +31,11 @@ jobs:
           pip install -r requirements.txt
 
       - name: Inject Google Sheets Credentials
+        env:
+          GCP_CREDS: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
         run: |
           mkdir -p req_files
-          echo "${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}" > req_files/gcp_service_account.json
+          echo "$GCP_CREDS" > req_files/gcp_service_account.json
 
       - name: Run Pipeline (Safe Mode)
         env:
