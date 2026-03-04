@@ -139,7 +139,7 @@
             "name": "AI Job Application Pipeline",
             "tech_stack": "Python, Google Sheets API, Jinja2, LaTeX, LLM APIs",
             "date": "2026",
-            "github_url": "",
+            "github_url": "https://github.com/Pr33datorrr/ai-job-autopilot",
             "bullets": [
                 "Architected an end-to-end automated job application pipeline in Python that scrapes listings, tailors resumes via LLM-powered bullet generation, compiles LaTeX PDFs, and logs applications to Google Sheets.",
                 "Implemented Jinja2-based dynamic template rendering to inject AI-tailored bullet points into a LaTeX resume template, enabling per-application customization at scale."
