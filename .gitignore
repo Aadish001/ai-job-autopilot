@@ -13,8 +13,22 @@ __pycache__/
 *.pyd
 .Python
 
-# Requisite files (sensitive)
-req_files/
+# Requisite files (API keys, credentials, tokens)
+Req_File/
 
 # Output artifacts (generated PDFs)
 output/
+
+# LaTeX auxiliary files
+*.aux
+*.log
+*.out
+*.synctex.gz
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

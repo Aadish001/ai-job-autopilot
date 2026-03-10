@@ -8,15 +8,17 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
 
-_SCOPES = ["https://www.googleapis.com/auth/drive.file"]
-_TOKEN_PATH = os.path.join(os.path.dirname(__file__), "..", "req_files", "token.json")
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 
+_SCOPES = ["https://www.googleapis.com/auth/drive.file"]
+_TOKEN_PATH = os.path.join(os.path.dirname(__file__), "..", "Req_File", "token.json")
 
 def _get_drive_service():
     """Authenticate with Drive API v3 using the user's OAuth token."""
     if not os.path.exists(_TOKEN_PATH):
         raise FileNotFoundError(
-            f"{_TOKEN_PATH} not found. Run 'python tools/oauth_setup.py' first."
+            f"{_TOKEN_PATH} not found. Follow the instructions to generate it first."
         )
     creds = Credentials.from_authorized_user_file(_TOKEN_PATH, _SCOPES)
     if creds.expired and creds.refresh_token:
@@ -57,24 +59,63 @@ def _find_or_create_folder(service, name: str, parent_id: str) -> str:
     return _create_folder(service, name, parent_id)
 
 
-def upload_pdf_to_drive(file_path: str, company_name: str, user_email: str) -> str:
+def upload_file(local_path: str, filename: str, folder_id: str = None) -> str:
+    """
+    Upload a local file to a specific Google Drive folder.
+    Returns the Web View Link of the uploaded file.
+    """
+    service = _get_drive_service()
+    if not service:
+        return ""
+
+    # Set mimeType based on extension. Default to generic stream if not .tex or .pdf
+    mime_type = "text/plain" if filename.endswith(".tex") else "application/pdf"
+    
+    file_metadata = {
+        "name": filename,
+        "mimeType": mime_type,
+    }
+    if folder_id:
+        file_metadata["parents"] = [folder_id]
+
+    media = MediaFileUpload(local_path, mimetype=mime_type, resumable=True)
+
+    try:
+        print(f"[cloud_storage] Uploading '{filename}' to folder '{folder_id}'...")
+        file = service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields="id, webViewLink"
+        ).execute()
+
+        link = file.get("webViewLink")
+        print(f"[cloud_storage] Upload success: {link}")
+        return link
+
+    except Exception as e:
+        print(f"[cloud_storage] File upload failed: {e}")
+        return ""
+
+def upload_to_drive(file_path: str, company_name: str) -> str:
+    """
+    Creates a 'YYYY-MM/Company' folder structure in Google Drive and uploads the file.
+    Returns the Web View Link of the uploaded file.
+    """
     root_folder_id = os.environ.get("DRIVE_ROOT_FOLDER_ID")
     if not root_folder_id:
-        raise ValueError("Environment variable DRIVE_ROOT_FOLDER_ID is not set.")
+        print("[cloud_storage] DRIVE_ROOT_FOLDER_ID not set. Skipping Drive upload.")
+        return ""
+    
     service = _get_drive_service()
+    if not service:
+        return ""
+
     month_folder_name = datetime.now().strftime("%Y-%m")
     month_folder_id = _find_or_create_folder(service, month_folder_name, root_folder_id)
     company_folder_id = _find_or_create_folder(service, company_name, month_folder_id)
+    
     file_name = os.path.basename(file_path)
-    media = MediaFileUpload(file_path, mimetype="application/pdf", resumable=True)
-    uploaded = service.files().create(
-        body={"name": file_name, "parents": [company_folder_id]},
-        media_body=media,
-        fields="id, webViewLink",
-    ).execute()
-    web_link = uploaded["webViewLink"]
-    print(f"   [Drive] Uploaded '{file_name}' -> {month_folder_name}/{company_name}/")
-    return web_link
+    return upload_file(file_path, file_name, folder_id=company_folder_id)
 
 
 def download_pdf_from_drive(web_view_link: str, output_path: str) -> str:

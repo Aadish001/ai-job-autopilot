@@ -6,7 +6,6 @@ from src.job_fetcher import JobFetcher
 from src.ai_tailor import ResumeTailor
 from src.job_filter import JobEvaluator
 from src.pdf_generator import generate_pdf
-from src.cloud_storage import upload_pdf_to_drive
 
 def main():
     load_dotenv()
@@ -32,12 +31,7 @@ def main():
         print("[main] No new jobs found. Exiting.")
         return
 
-    print(f"\n[main] Processing {len(new_jobs)} new jobs in HUMAN-IN-THE-LOOP mode...\n")
-
-    safe_mode_email = os.environ.get("SAFE_MODE_EMAIL")
-    if not safe_mode_email:
-        print("[main] ERROR: SAFE_MODE_EMAIL environment variable is not set. Exiting.")
-        return
+    print(f"\n[main] Processing {len(new_jobs)} new jobs...\n")
 
     for idx, job in enumerate(new_jobs, start=1):
         job_hash = job["job_hash_id"]
@@ -105,32 +99,25 @@ def main():
         try:
             tailored_data = resume_tailor.tailor_application(description, company, title)
             bullets = tailored_data.get("tailored_bullet_points", [])
-            cold_email = tailored_data.get("cold_email_body", "")
         except Exception as e:
             print(f"   [!] Failed to tailor application: {e}")
             continue
 
-        print("   -> Generating tailored PDF resume...")
+        print("   -> Generating tailored LaTeX resume...")
         pdf_result = generate_pdf(company, bullets)
         if pdf_result.get("status") != "success":
-            print(f"   [!] PDF generation failed: {pdf_result.get('error')}")
+            print(f"   [!] LaTeX generation failed: {pdf_result.get('error')}")
             continue
 
-        pdf_path = pdf_result["pdf_path"]
-
-        print("   -> Uploading PDF to Google Drive...")
-        try:
-            pdf_cloud_link = upload_pdf_to_drive(pdf_path, company, safe_mode_email)
-        except Exception as e:
-            print(f"   [!] Drive upload failed: {e}")
-            pdf_cloud_link = ""
+        tex_path = pdf_result["tex_path"]
+        print(f"   [OK] LaTeX saved locally: {tex_path}")
 
         print("   -> Logging to Google Sheet as 'Pending Review'...")
         sheet_manager.log_job(
             job_hash_id=job_hash, company=company, title=title,
             status="Pending Review", match_score=match_score,
             evaluation_reason=eval_reason, pain_point=pain_point,
-            email_draft_body=cold_email, pdf_cloud_link=pdf_cloud_link, job_link=link,
+            pdf_cloud_link=tex_path, job_link=link,
         )
         print("   -> Logged.")
 

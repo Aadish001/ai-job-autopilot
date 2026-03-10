@@ -24,11 +24,13 @@ class JobFetcher:
         }
 
         self.queries = [
-            "Data Engineer Intern in Toronto",
-            "Part Time Data Analyst in Toronto",
-            "Data Engineer Intern in Vancouver",
-            "Part Time Data Analyst in Vancouver",
-            "Remote Machine Learning Intern in Canada",
+            "Full Stack Developer in Vancouver",
+            "Software Developer in Vancouver",
+            "Full Stack Developer in Toronto",
+            "Software Developer in Toronto",
+            "Full Stack Developer in Ontario",
+            "Software Developer in Ontario",
+            "Remote Full Stack Developer in Canada",
         ]
 
     # ------------------------------------------------------------------

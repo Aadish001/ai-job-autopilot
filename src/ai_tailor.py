@@ -9,6 +9,10 @@ class ResumeTailor:
     Uses the Google GenAI SDK (Gemma 3 27B-IT) to generate
     tailored resume bullet points and a cold email from a
     job description, grounded strictly in the user's master profile.
+
+    Enhanced: dynamically identifies skills from the JD that the
+    candidate possesses but that are not yet highlighted, and weaves
+    them into the tailored bullets.
     """
 
     MODEL = "gemma-3-27b-it"
@@ -39,55 +43,54 @@ class ResumeTailor:
         profile = self._load_profile()
 
         prompt = (
-            "You are an elite career strategist with deep expertise in Data Engineering, "
-            "Machine Learning, Analytics, and modern AI-infrastructure hiring.\n\n"
+            "You are an elite career strategist with deep expertise in Full Stack Development, "
+            "Backend API design, Frontend React/Next.js engineering, and modern cloud-native hiring.\n\n"
 
             "## RULES\n"
             "1. **No Hallucination.** You must NEVER fabricate skills, tools, metrics, or "
             "experiences the candidate does NOT possess. Only reference what exists in "
             "their CANDIDATE PROFILE below.\n\n"
 
-            "2. **Strict JSON Output.** Return **only** valid JSON with exactly two keys:\n"
+            "2. **Strict JSON Output.** Return **only** valid JSON with exactly one key:\n"
             '   - `"tailored_bullet_points"`: a JSON array of exactly 5 powerful, '
             "ATS-optimised resume bullet points (strings).\n"
-            '   - `"cold_email_body"`: a single string containing a concise, 3-paragraph '
-            "cold email targeted at a hiring manager.\n"
             "   Do NOT wrap the JSON in markdown code fences or add any text outside it.\n\n"
 
-            "3. **PLACEHOLDER BAN (CRITICAL).** The company you are writing for is "
-            f'**"{company_name}"** and the role title is **"{job_title}"**. '
-            "You MUST weave these exact names naturally into the cold email body. "
-            "Under **NO circumstances** may you use ANY bracketed placeholder "
-            "tokens anywhere in your output. This includes, but is not limited to: "
-            "`[Company Name]`, `[Startup]`, `[Your Name]`, `[Hiring Manager Name]`, "
-            "`[Platform]`, `[Link to Portfolio]`, `[Link to LinkedIn/Portfolio]`, "
-            "`[Job Board]`, or ANY other `[...]` token. "
-            "Use the candidate's actual name from the profile (not a placeholder). "
-            "If you do not know a specific piece of information (e.g., the hiring "
-            "manager's name or where the job was found), simply omit it or write "
-            "around it gracefully.\n\n"
+            "3. **Dynamic Skill Injection from JD (CRITICAL).** Before writing bullets, "
+            "carefully cross-reference the JOB DESCRIPTION against the CANDIDATE PROFILE. "
+            "Identify every skill, technology, framework, or methodology mentioned in the JD "
+            "that the candidate genuinely possesses (listed in their profile). "
+            "You MUST weave these matching skills naturally into the bullet points — even "
+            "if they are not prominently featured in the candidate's existing experience bullets. "
+            "For example, if the JD mentions 'PostgreSQL' and the candidate lists it under "
+            "cloud_data skills, reference it in a bullet. This maximises ATS keyword matching.\n\n"
 
             "4. **STAR+ Narrative Pivot.** When generating bullet points from the "
-            "candidate's past corporate data-engineering experience, dynamically reframe "
-            "each accomplishment as \"Data Readiness for AI/ML.\" Retain every original "
-            "quantitative metric exactly as stated in the profile.\n\n"
+            "candidate's past full-stack development experience, dynamically reframe "
+            "each accomplishment to align with the specific role requirements. Retain every "
+            "original quantitative metric exactly as stated in the profile.\n\n"
 
             "5. **Self-Referencing Portfolio Injection.** Evaluate the job title "
             f'"{job_title}":\n'
-            "   - **IF technical** (Data Engineer, ML Engineer, etc.): highlight the "
-            "candidate's \"AI Job Application Pipeline\" project emphasising Python "
-            "orchestration, GenAI SDK integration, and automated multi-stage routing.\n"
-            "   - **IF business-focused** (Product Manager, Analyst, etc.): highlight the "
-            "same project but emphasise process optimisation and cycle-time reduction.\n\n"
+            "   - **IF backend-heavy** (Backend Engineer, API Developer, etc.): highlight the "
+            "candidate's \"Real-Time Web IDE\" project emphasising Spring Boot service, "
+            "15+ REST APIs, execution caching, and cold-start optimisation.\n"
+            "   - **IF frontend-heavy** (Frontend Developer, UI Engineer, etc.): highlight the "
+            "candidate's \"Real-Time Stock Market App\" project emphasising Next.js 15, "
+            "real-time updates, and alerting UI.\n"
+            "   - **IF full-stack** (Full Stack Developer, Software Engineer, etc.): blend "
+            "highlights from BOTH projects.\n\n"
 
-            "6. **Salutation Fallback.** Never use placeholders like "
-            "'[Hiring Manager Name]'. If a specific person is not mentioned in the "
-            "job description, you must strictly use "
-            f"'Dear Hiring Team at {company_name},' as the opening salutation.\n\n"
+            "6. **PLACEHOLDER BAN (CRITICAL).** The company you are writing for is "
+            f'"**{company_name}**" and the role title is "**{job_title}**". '
+            "Under **NO circumstances** may you use ANY bracketed placeholder "
+            "tokens anywhere in your output. This includes, but is not limited to: "
+            "`[Company Name]`, `[Startup]`, `[Your Name]`, `[Technology]`, "
+            "or ANY other `[...]` token.\n\n"
 
-            "7. **No Markdown Links.** Under NO circumstances are you allowed to use "
-            "Markdown hyperlink syntax (e.g., `[text](url)`) in the email body. "
-            "If you reference a URL, output it as raw plain text.\n\n"
+            "7. **Quantify Everything.** Every bullet MUST contain at least one "
+            "quantitative metric (percentage improvement, count, latency, throughput, etc.) "
+            "drawn from the candidate's actual profile data.\n\n"
 
             "## CANDIDATE PROFILE\n"
             f"```json\n{json.dumps(profile, indent=2)}\n```\n\n"

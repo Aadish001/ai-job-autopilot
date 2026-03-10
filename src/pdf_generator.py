@@ -42,20 +42,19 @@ def escape_latex(text: str) -> str:
 def generate_pdf(company_name: str, tailored_bullets_list: list) -> dict:
     """
     Inject *tailored_bullets_list* into the LaTeX template,
-    compile to PDF, and return a status dict.
+    and save the resulting .tex file.
 
     Parameters
     ----------
     company_name : str
-        Used only for logging / future filename customisation.
+        Used for creating a unique filename.
     tailored_bullets_list : list[str]
         Exactly 5 bullet-point strings to inject.
 
     Returns
     -------
     dict
-        ``{"status": "success", "pdf_path": ...}`` on success, or
-        ``{"status": "failed", "tex_path": ..., "error": ...}`` on failure.
+        ``{"status": "success", "tex_path": ...}``
     """
     # --- 1.  Read template ------------------------------------------------
     with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
@@ -66,58 +65,19 @@ def generate_pdf(company_name: str, tailored_bullets_list: list) -> dict:
         placeholder = f"[[BULLET{i}]]"
         tex = tex.replace(placeholder, escape_latex(bullet))
 
-    # --- 3.  Write modified .tex -----------------------------------------
+    # --- 3.  Clean company name for filename -----------------------------
+    safe_company_name = re.sub(r'[^A-Za-z0-9_-]', '_', company_name)
+    file_name = f"resume_{safe_company_name}.tex"
+
+    # --- 4.  Write modified .tex -----------------------------------------
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    tex_path = os.path.join(OUTPUT_DIR, "modified_template.tex")
+    tex_path = os.path.join(OUTPUT_DIR, file_name)
     with open(tex_path, "w", encoding="utf-8") as f:
         f.write(tex)
 
     print(f"[pdf_generator] Wrote modified template -> {tex_path}")
-
-    # --- 4.  Compile with pdflatex --------------------------------------
-    pdf_path = os.path.join(OUTPUT_DIR, "modified_template.pdf")
-
-    try:
-        result = subprocess.run(
-            [
-                "pdflatex",
-                "-interaction=nonstopmode",
-                f"-output-directory={OUTPUT_DIR}",
-                tex_path,
-            ],
-            capture_output=True,
-            text=True,
-            timeout=120,
-        )
-
-        if result.returncode == 0:
-            print(f"[pdf_generator] PDF compiled successfully -> {pdf_path}")
-            return {"status": "success", "pdf_path": pdf_path}
-        else:
-            error_snippet = (result.stdout + result.stderr)[-500:]
-            print(f"[pdf_generator] pdflatex exited with code {result.returncode}")
-            print(f"[pdf_generator] Tail of log:\n{error_snippet}")
-            return {
-                "status": "failed",
-                "tex_path": tex_path,
-                "error": "Compilation failed.",
-            }
-
-    except FileNotFoundError:
-        msg = "pdflatex not found on PATH. Install a TeX distribution (e.g. MiKTeX or TeX Live)."
-        print(f"[pdf_generator] {msg}")
-        return {"status": "failed", "tex_path": tex_path, "error": msg}
-
-    except subprocess.TimeoutExpired:
-        msg = "pdflatex timed out after 120 s."
-        print(f"[pdf_generator] {msg}")
-        return {"status": "failed", "tex_path": tex_path, "error": msg}
-
-    except Exception as exc:
-        msg = f"Unexpected error during compilation: {exc}"
-        print(f"[pdf_generator] {msg}")
-        return {"status": "failed", "tex_path": tex_path, "error": msg}
-
+    
+    return {"status": "success", "tex_path": tex_path}
 
 # ======================================================================
 # CLI entry-point

@@ -5,8 +5,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from src.db_manager import SheetManager
-from src.cloud_storage import download_pdf_from_drive
-from src.email_dispatcher import send_cold_email
 
 st.set_page_config(
     page_title="AI Job Autopilot - Mission Control",
@@ -17,18 +15,18 @@ st.set_page_config(
 
 def bootstrap_cloud_env():
     """Write credential files and inject env vars from Streamlit Secrets."""
-    os.makedirs("req_files", exist_ok=True)
-    if "GCP_SERVICE_ACCOUNT_JSON" in st.secrets:
-        sa_path = os.path.join("req_files", "gcp_service_account.json")
-        with open(sa_path, "w") as f:
-            f.write(st.secrets["GCP_SERVICE_ACCOUNT_JSON"])
-        os.environ.setdefault("GOOGLE_SHEETS_CREDENTIALS", sa_path)
-    if "GCP_OAUTH_TOKEN_JSON" in st.secrets:
-        with open(os.path.join("req_files", "token.json"), "w") as f:
-            f.write(st.secrets["GCP_OAUTH_TOKEN_JSON"])
-    for env_var in ["GOOGLE_SHEETS_ID", "DRIVE_ROOT_FOLDER_ID", "SAFE_MODE_EMAIL"]:
-        if env_var in st.secrets:
-            os.environ.setdefault(env_var, st.secrets[env_var])
+    try:
+        os.makedirs("Req_File", exist_ok=True)
+        if "GCP_SERVICE_ACCOUNT_JSON" in st.secrets:
+            sa_path = os.path.join("Req_File", "gcp_service_account.json")
+            with open(sa_path, "w") as f:
+                f.write(st.secrets["GCP_SERVICE_ACCOUNT_JSON"])
+            os.environ.setdefault("GOOGLE_SHEETS_CREDENTIALS", sa_path)
+        for env_var in ["GOOGLE_SHEETS_ID"]:
+            if env_var in st.secrets:
+                os.environ.setdefault(env_var, st.secrets[env_var])
+    except Exception:
+        pass
 
 
 bootstrap_cloud_env()
@@ -48,7 +46,7 @@ st.markdown(
     </style>
     <div class="main-header">
         <h1>\U0001f3af AI Job Autopilot \u2014 Mission Control</h1>
-        <p>Review AI-generated applications before dispatch. Approve, edit, or reject.</p>
+        <p>Review AI-generated applications. Approve or reject tailored resumes.</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -88,7 +86,7 @@ sheet_manager = get_sheet_manager()
 
 tab1, tab2, tab3 = st.tabs([
     "\U0001f4cb Pending Review",
-    "\u2705 Dispatch History",
+    "\u2705 Approved",
     "\U0001f5d1\ufe0f Evaluation Logs",
 ])
 
@@ -112,8 +110,7 @@ with tab1:
             score_int = job["Match_Score"]
             eval_reason = job["Evaluation_Reason"]
             pain_point = job["Pain_Point"]
-            email_draft = job["Email_Draft_Body"]
-            pdf_link = job["PDF_Cloud_Link"]
+            tex_link = job["PDF_Cloud_Link"]
             job_link = job["Job_Link"]
 
             label = f"\U0001f3e2 {company}  |  \U0001f4bc {title}  |  \U0001f3af Match: {score_int}%"
@@ -128,16 +125,16 @@ with tab1:
                     else:
                         st.info("No pain point extracted.")
                 with met_col3:
-                    if pdf_link:
-                        st.link_button("\U0001f4c4 View Generated PDF", pdf_link, use_container_width=True)
+                    if tex_link:
+                        st.caption(f"**LaTeX Path:** `{tex_link}`")
                     else:
-                        st.caption("No PDF link available.")
+                        st.caption("No LaTeX file available.")
 
                 if eval_reason:
                     st.caption(f"**12B Evaluation:** {eval_reason}")
                 st.divider()
 
-                col_left, col_right = st.columns([1, 1.5])
+                col_left, col_right = st.columns([1, 1])
                 with col_left:
                     st.subheader("Context")
                     if job_link:
@@ -150,21 +147,35 @@ with tab1:
                     if pain_point:
                         st.markdown("---")
                         st.markdown(f"**Pain Point:** {pain_point}")
+
                 with col_right:
-                    st.subheader("Dispatch")
-                    recruiter_email = st.text_input(
-                        "Target Recruiter Email (Required to Send)",
-                        key=f"email_{job_hash}", placeholder="recruiter@company.com",
-                    )
-                    edited_email = st.text_area(
-                        "Email Draft (edit before sending)",
-                        value=email_draft, height=350, key=f"draft_{job_hash}",
-                    )
+                    st.subheader("Resume LaTeX")
+                    if tex_link:
+                        st.markdown(f"Generated LaTeX saved at: `{tex_link}`")
+                        
+                        # Add a quick download button or code display if the file exists
+                        try:
+                            if os.path.exists(tex_link):
+                                with open(tex_link, "r", encoding="utf-8") as f:
+                                    tex_content = f.read()
+                                st.download_button(
+                                    label="\u2b07\ufe0f Download .tex file",
+                                    data=tex_content,
+                                    file_name=os.path.basename(tex_link),
+                                    mime="text/plain",
+                                    key=f"dl_{job_hash}"
+                                )
+                                with st.expander("View LaTeX Source"):
+                                    st.code(tex_content, language="latex")
+                        except Exception as e:
+                            st.caption(f"Could not read local file: {e}")
+                    else:
+                        st.caption("No LaTeX generated for this job.")
 
                 st.divider()
                 _, btn_left, btn_right, _ = st.columns([1, 2, 2, 1])
                 with btn_left:
-                    approve = st.button("\u2705 Approve & Dispatch", key=f"approve_{job_hash}", type="primary", use_container_width=True)
+                    approve = st.button("\u2705 Approve", key=f"approve_{job_hash}", type="primary", use_container_width=True)
                 with btn_right:
                     reject = st.button("\u274c Reject", key=f"reject_{job_hash}", use_container_width=True)
 
@@ -173,55 +184,37 @@ with tab1:
                     st.toast(f"Rejected: {company} \u2014 {title}", icon="\u274c")
                     st.rerun()
                 if approve:
-                    if not recruiter_email or "@" not in recruiter_email:
-                        st.error("\u26a0\ufe0f Please enter a valid recruiter email address before approving.")
-                        st.stop()
-                    with st.spinner("Downloading PDF from Drive..."):
-                        local_pdf = os.path.join("output", f"dispatch_{company.replace(' ', '_')}.pdf")
-                        try:
-                            download_pdf_from_drive(pdf_link, local_pdf)
-                        except Exception as e:
-                            st.error(f"Drive download failed: {e}")
-                            st.stop()
-                    with st.spinner("Dispatching email..."):
-                        subject = f"Application: {title} \u2014 Yash Gupta"
-                        success = send_cold_email(
-                            to_email=recruiter_email, subject=subject,
-                            body_text=edited_email, pdf_attachment_path=local_pdf, test_mode=True,
-                        )
-                    if success:
-                        sheet_manager.update_status(job_hash, "Applied", applied_to_email=recruiter_email)
-                        st.toast(f"Dispatched to {recruiter_email}!", icon="\u2705")
-                        st.rerun()
-                    else:
-                        st.error("Email dispatch failed. Check SMTP credentials.")
+                    sheet_manager.update_status(job_hash, "Approved")
+                    st.toast(f"Approved: {company} \u2014 {title}", icon="\u2705")
+                    st.rerun()
 
-# TAB 2 - Dispatch History
+# TAB 2 - Approved
 with tab2:
-    applied_jobs = fetch_by_status(sheet_manager, ["Applied"])
-    if not applied_jobs:
-        st.info("No dispatched applications yet.")
+    approved_jobs = fetch_by_status(sheet_manager, ["Approved"])
+    if not approved_jobs:
+        st.info("No approved applications yet.")
     else:
-        st.metric("Total Dispatched", len(applied_jobs))
+        st.metric("Total Approved", len(approved_jobs))
         st.divider()
-        for job in applied_jobs:
+        for job in approved_jobs:
             company = job["Company"]
             title = job["Job_Title"]
             score = job["Match_Score"]
-            sent_to = job["Applied_To_Email"]
-            pdf_link = job["PDF_Cloud_Link"]
+            tex_link = job["PDF_Cloud_Link"]
+            job_link = job["Job_Link"]
             with st.expander(f"\u2705 {company} \u2014 {title} (Score: {score}%)"):
                 c1, c2 = st.columns(2)
                 with c1:
                     st.markdown(f"**Company:** {company}")
                     st.markdown(f"**Role:** {title}")
                     st.markdown(f"**Match Score:** {score}%")
-                    st.markdown(f"**Sent To:** `{sent_to}`" if sent_to else "**Sent To:** N/A")
+                    if job_link:
+                        st.markdown(f"[\U0001f517 Job Posting]({job_link})")
                 with c2:
-                    if pdf_link:
-                        st.link_button("\U0001f4c4 View Submitted PDF", pdf_link, use_container_width=True)
+                    if tex_link:
+                        st.caption(f"**LaTeX Path:** `{tex_link}`")
                     else:
-                        st.caption("No PDF link.")
+                        st.caption("No LaTeX link.")
 
 # TAB 3 - Evaluation Logs
 with tab3:
