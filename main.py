@@ -5,7 +5,9 @@ from src.db_manager import SheetManager
 from src.job_fetcher import JobFetcher
 from src.ai_tailor import ResumeTailor
 from src.job_filter import JobEvaluator
+import json
 from src.pdf_generator import generate_pdf
+from src.cloud_storage import upload_to_drive
 
 def main():
     load_dotenv()
@@ -17,6 +19,13 @@ def main():
         resume_tailor = ResumeTailor()
         job_evaluator = JobEvaluator()
     except Exception as e:
+        err_msg = str(e)
+        if "Expecting value" in err_msg or "JSONDecodeError" in err_msg or "not found" in err_msg:
+            print("\n" + "="*80)
+            print("[!] FATAL ERROR: Credentials missing or invalid!")
+            print("[!] If running on GitHub Actions, you did not paste the FULL JSON into your Secrets.")
+            print(f"[!] Please set GCP_SERVICE_ACCOUNT_JSON and GCP_OAUTH_TOKEN_JSON correctly.")
+            print("="*80 + "\n")
         print(f"[main] Initialization failed: {e}")
         return
 
@@ -103,21 +112,30 @@ def main():
             print(f"   [!] Failed to tailor application: {e}")
             continue
 
-        print("   -> Generating tailored LaTeX resume...")
+        print(f"   -> Generating tailored resume (PDF/TEX)...")
         pdf_result = generate_pdf(company, bullets)
         if pdf_result.get("status") != "success":
-            print(f"   [!] LaTeX generation failed: {pdf_result.get('error')}")
+            print(f"   [!] Generation failed: {pdf_result.get('error')}")
             continue
 
-        tex_path = pdf_result["tex_path"]
-        print(f"   [OK] LaTeX saved locally: {tex_path}")
+        file_path = pdf_result.get("file_path", pdf_result.get("tex_path"))
+        file_type = pdf_result.get("type", "tex").upper()
+        print(f"   [OK] Saved locally: {file_path}")
+
+        print(f"   -> Uploading {file_type} to Google Drive...")
+        try:
+            web_link = upload_to_drive(file_path, company)
+            print(f"   [OK] Uploaded to Drive: {web_link}")
+        except Exception as e:
+            print(f"   [!] Drive upload failed: {e}")
+            web_link = file_path # Fallback to local path if Drive fails
 
         print("   -> Logging to Google Sheet as 'Pending Review'...")
         sheet_manager.log_job(
             job_hash_id=job_hash, company=company, title=title,
             status="Pending Review", match_score=match_score,
             evaluation_reason=eval_reason, pain_point=pain_point,
-            pdf_cloud_link=tex_path, job_link=link,
+            pdf_cloud_link=web_link, job_link=link,
         )
         print("   -> Logged.")
 

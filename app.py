@@ -149,28 +149,36 @@ with tab1:
                         st.markdown(f"**Pain Point:** {pain_point}")
 
                 with col_right:
-                    st.subheader("Resume LaTeX")
+                    import re
+                    st.subheader("Automated Resume")
                     if tex_link:
-                        st.markdown(f"Generated LaTeX saved at: `{tex_link}`")
+                        if "drive.google.com" in tex_link:
+                            st.markdown(f"**[\U0001f4c1 View Document on Google Drive]({tex_link})**")
+                        else:
+                            st.markdown(f"**Local Path:** `{tex_link}`")
                         
-                        # Add a quick download button or code display if the file exists
+                        # Dynamically find the local .tex file for viewing/downloading the source
+                        safe_company = re.sub(r'[^A-Za-z0-9_-]', '_', company)
+                        local_tex_path = os.path.join("output", f"resume_{safe_company}.tex")
                         try:
-                            if os.path.exists(tex_link):
-                                with open(tex_link, "r", encoding="utf-8") as f:
+                            if os.path.exists(local_tex_path):
+                                with open(local_tex_path, "r", encoding="utf-8") as f:
                                     tex_content = f.read()
                                 st.download_button(
-                                    label="\u2b07\ufe0f Download .tex file",
+                                    label="\u2b07\ufe0f Download Local .tex Source",
                                     data=tex_content,
-                                    file_name=os.path.basename(tex_link),
+                                    file_name=f"resume_{safe_company}.tex",
                                     mime="text/plain",
                                     key=f"dl_{job_hash}"
                                 )
                                 with st.expander("View LaTeX Source"):
                                     st.code(tex_content, language="latex")
+                            else:
+                                st.caption("*(Local .tex file not found on your PC. It may only exist in the Cloud/GitHub Actions).*")
                         except Exception as e:
                             st.caption(f"Could not read local file: {e}")
                     else:
-                        st.caption("No LaTeX generated for this job.")
+                        st.caption("No Resume generated for this job.")
 
                 st.divider()
                 _, btn_left, btn_right, _ = st.columns([1, 2, 2, 1])
@@ -212,9 +220,12 @@ with tab2:
                         st.markdown(f"[\U0001f517 Job Posting]({job_link})")
                 with c2:
                     if tex_link:
-                        st.caption(f"**LaTeX Path:** `{tex_link}`")
+                        if "drive.google.com" in tex_link:
+                            st.markdown(f"**[\U0001f4c1 View Document on Google Drive]({tex_link})**")
+                        else:
+                            st.markdown(f"**Local Path:** `{tex_link}`")
                     else:
-                        st.caption("No LaTeX link.")
+                        st.caption("No document link available.")
 
 # TAB 3 - Evaluation Logs
 with tab3:

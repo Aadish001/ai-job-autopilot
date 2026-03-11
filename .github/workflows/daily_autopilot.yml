@@ -54,17 +54,7 @@ jobs:
           python main.py
 
       - name: Compile LaTeX to PDF
-        run: |
-          if [ -d "output" ]; then
-            cd output
-            for f in *.tex; do
-              if [ -f "$f" ]; then
-                pdflatex -interaction=nonstopmode "$f"
-              fi
-            done
-          else
-            echo "No output directory found. No PDFs to compile."
-          fi
+        run: echo "Skipping standalone compilation; Python script handles PDF generation and Drive upload directly."
 
       - name: Upload PDF Artifacts
         uses: actions/upload-artifact@v4

@@ -77,7 +77,23 @@ def generate_pdf(company_name: str, tailored_bullets_list: list) -> dict:
 
     print(f"[pdf_generator] Wrote modified template -> {tex_path}")
     
-    return {"status": "success", "tex_path": tex_path}
+    # --- 5. Attempt pdflatex Compilation -------------------------------------
+    pdf_path = tex_path.replace(".tex", ".pdf")
+    try:
+        compiler_cmd = ["pdflatex", "-interaction=nonstopmode", "-output-directory", OUTPUT_DIR, tex_path]
+        print(f"[pdf_generator] Attempting PDF compilation...")
+        # Run twice for cross-references if necessary
+        subprocess.run(compiler_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(compiler_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        
+        if os.path.exists(pdf_path):
+            print(f"[pdf_generator] Successfully generated PDF: {pdf_path}")
+            return {"status": "success", "file_path": pdf_path, "tex_path": tex_path, "type": "pdf"}
+    except (FileNotFoundError, subprocess.CalledProcessError) as e:
+        print(f"[pdf_generator] pdflatex failed or not installed, falling back to .tex. ({e})")
+        pass
+    
+    return {"status": "success", "file_path": tex_path, "tex_path": tex_path, "type": "tex"}
 
 # ======================================================================
 # CLI entry-point

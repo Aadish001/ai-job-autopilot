@@ -46,6 +46,13 @@ def test_local_jd():
         resume_tailor = ResumeTailor()
         job_evaluator = JobEvaluator()
     except Exception as e:
+        err_msg = str(e)
+        if "Expecting value" in err_msg or "JSONDecodeError" in err_msg or "not found" in err_msg:
+            print("\n" + "="*80)
+            print("[!] FATAL ERROR: Credentials missing or invalid!")
+            print("[!] If running on GitHub Actions, you did not paste the FULL JSON into your Secrets.")
+            print(f"[!] Please set GCP_SERVICE_ACCOUNT_JSON and GCP_OAUTH_TOKEN_JSON correctly.")
+            print("="*80 + "\n")
         print(f"[!] Services failed to initialize: {e}")
         return
 
@@ -77,22 +84,23 @@ def test_local_jd():
 
     from src.cloud_storage import upload_to_drive
 
-    print("\n-> Generating LaTeX Resume...")
+    print("\n-> Generating Resume (PDF/TEX)...")
     pdf_result = generate_pdf(company, bullets)
     if pdf_result.get("status") != "success":
-        print(f"[!] LaTeX generation failed: {pdf_result.get('error')}")
+        print(f"[!] Generation failed: {pdf_result.get('error')}")
         return
 
-    tex_path = pdf_result["tex_path"]
-    print(f"   [OK] LaTeX saved locally: {tex_path}")
+    file_path = pdf_result.get("file_path", pdf_result.get("tex_path"))
+    file_type = pdf_result.get("type", "tex").upper()
+    print(f"   [OK] Saved locally: {file_path}")
 
-    print("\n-> Uploading LaTeX to Google Drive...")
-    web_link = upload_to_drive(tex_path, company)
+    print(f"\n-> Uploading {file_type} to Google Drive...")
+    web_link = upload_to_drive(file_path, company)
     if web_link:
         print(f"   [OK] Uploaded to Drive: {web_link}")
     else:
         print("   [!] Drive upload failed or was skipped. Using local path.")
-        web_link = tex_path
+        web_link = file_path
 
     print("\n-> Logging to Google Sheet as 'Pending Review'...")
     try:
