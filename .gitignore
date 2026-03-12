@@ -1,5 +1,7 @@
 # Environment files
 .env
+.streamlit/secrets.toml
+set_github_secrets.py
 
 # Virtual environment
 venv/
