@@ -59,7 +59,9 @@ class JobFetcher:
 
             params = {
                 "query": query,
-                "num_pages": "1",  # ~5-7 results per query
+                "num_pages": "1",
+                "date_posted": "today",    # Only jobs from the last 24 hours
+                "country": "ca",           # Restrict to Canada
             }
 
             response = requests.get(
@@ -71,6 +73,7 @@ class JobFetcher:
             response.raise_for_status()
 
             data = response.json().get("data", [])
+            data = data[:5]  # Cap at 5 results per query
             print(f"   -> Received {len(data)} jobs.")
 
             for item in data:
