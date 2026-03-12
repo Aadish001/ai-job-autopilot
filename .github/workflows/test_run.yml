@@ -32,8 +32,8 @@ jobs:
           OAUTH_TOKEN: ${{ secrets.GCP_OAUTH_TOKEN_JSON }}
         run: |
           mkdir -p Req_File
-          echo "$GCP_CREDS" > Req_File/gcp_service_account.json
-          echo "$OAUTH_TOKEN" > Req_File/token.json
+          printf '%s' "$GCP_CREDS" > Req_File/gcp_service_account.json
+          printf '%s' "$OAUTH_TOKEN" > Req_File/token.json
 
       - name: Run Test Script
         env:
@@ -41,7 +41,7 @@ jobs:
           RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
           RAPIDAPI_HOST: jsearch.p.rapidapi.com
           GOOGLE_SHEETS_CREDENTIALS: Req_File/gcp_service_account.json
-          GOOGLE_SHEETS_ID: 1Nd-sFG_j7FrGIE2rv_o6-VOf7C2XmE0zdVEIjbcDkgY
+          GOOGLE_SHEETS_ID: ${{ secrets.GOOGLE_SHEETS_ID }}
           DRIVE_ROOT_FOLDER_ID: ${{ secrets.DRIVE_ROOT_FOLDER_ID }}
         run: |
           python test_local.py
