@@ -42,6 +42,7 @@ jobs:
       - name: Run Pipeline
         env:
           GEMMA_API_KEY: ${{ secrets.GEMMA_API_KEY }}
+          GEMMA_API_KEY_BACKUP: ${{ secrets.GEMMA_API_KEY_BACKUP }}
           RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
           RAPIDAPI_HOST: jsearch.p.rapidapi.com
           SMTP2GO_USERNAME: ${{ secrets.SMTP2GO_USER }}

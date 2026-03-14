@@ -1,7 +1,7 @@
 import os
 import re
 import json
-from google import genai
+from src.gemini_client import gemini_generate
 
 
 class JobEvaluator:
@@ -28,11 +28,8 @@ class JobEvaluator:
     }
 
     def __init__(self):
-        api_key = os.environ.get("GEMMA_API_KEY")
-        if not api_key:
-            raise ValueError("Environment variable GEMMA_API_KEY is not set.")
-
-        self.client = genai.Client(api_key=api_key)
+        # API key validation is handled by gemini_client module
+        pass
 
     # ------------------------------------------------------------------
     # Helpers
@@ -125,14 +122,14 @@ class JobEvaluator:
             "Now evaluate and return the JSON verdict."
         )
 
-        response = self.client.models.generate_content(
+        response_text = gemini_generate(
             model=self.MODEL,
             contents=prompt,
         )
 
         try:
-            return self._clean_response(response.text)
+            return self._clean_response(response_text)
         except (json.JSONDecodeError, TypeError) as e:
             print(f"[JobEvaluator] WARNING: Failed to parse LLM response: {e}")
-            print(f"[JobEvaluator] Raw response: {response.text[:500]}")
+            print(f"[JobEvaluator] Raw response: {response_text[:500]}")
             return dict(self._FALLBACK)

@@ -1,7 +1,7 @@
 import os
 import re
 import json
-from google import genai
+from src.gemini_client import gemini_generate
 
 
 class ResumeTailor:
@@ -19,10 +19,8 @@ class ResumeTailor:
     PROFILE_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "master_profile.json")
 
     def __init__(self):
-        api_key = os.environ.get("GEMMA_API_KEY")
-        if not api_key:
-            raise ValueError("Environment variable GEMMA_API_KEY is not set.")
-        self.client = genai.Client(api_key=api_key)
+        # API key validation is handled by gemini_client module
+        pass
 
     def _load_profile(self) -> dict:
         with open(self.PROFILE_PATH, "r", encoding="utf-8") as f:
@@ -103,9 +101,9 @@ class ResumeTailor:
             "Now generate the JSON output."
         )
 
-        response = self.client.models.generate_content(
+        response_text = gemini_generate(
             model=self.MODEL,
             contents=prompt,
         )
 
-        return self._clean_response(response.text)
+        return self._clean_response(response_text)

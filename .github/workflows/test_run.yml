@@ -38,6 +38,7 @@ jobs:
       - name: Run Test Script
         env:
           GEMMA_API_KEY: ${{ secrets.GEMMA_API_KEY }}
+          GEMMA_API_KEY_BACKUP: ${{ secrets.GEMMA_API_KEY_BACKUP }}
           RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
           RAPIDAPI_HOST: jsearch.p.rapidapi.com
           GOOGLE_SHEETS_CREDENTIALS: Req_File/gcp_service_account.json
