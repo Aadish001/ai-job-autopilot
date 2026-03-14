@@ -24,13 +24,8 @@ class JobFetcher:
         }
 
         self.queries = [
-            "Full Stack Developer in Vancouver",
-            "Software Developer in Vancouver",
-            "Full Stack Developer in Toronto",
-            "Software Developer in Toronto",
-            "Full Stack Developer in Ontario",
-            "Software Developer in Ontario",
-            "Remote Full Stack Developer in Canada",
+            "Full Stack Developer OR Software Developer in Vancouver OR Toronto",
+            "Remote Full Stack Developer OR Remote Software Developer in Canada"
         ]
 
     # ------------------------------------------------------------------
